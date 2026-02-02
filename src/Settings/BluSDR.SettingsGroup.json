@@ -1,0 +1,51 @@
+{
+    "version": 1,
+    "fileType": "FactMetaData",
+    "QGC.MetaData.Facts": [
+        {
+            "name": "enabled",
+            "shortDesc": "Enable BluSDR",
+            "longDesc": "Enable or disable BluSDR monitoring.",
+            "type": "bool",
+            "default": false
+        },
+        {
+            "name": "device1Enabled",
+            "shortDesc": "Enable Device 1 (GCS)",
+            "longDesc": "Enable monitoring for BluSDR device 1.",
+            "type": "bool",
+            "default": true
+        },
+        {
+            "name": "device2Enabled",
+            "shortDesc": "Enable Device 2 (LM)",
+            "longDesc": "Enable monitoring for BluSDR device 2.",
+            "type": "bool",
+            "default": true
+        },
+        {
+            "name": "device1IP",
+            "shortDesc": "Device 1 IP Address",
+            "longDesc": "IP address of BluSDR device 1 (GCS).",
+            "type": "string",
+            "default": "192.168.0.12"
+        },
+        {
+            "name": "device2IP",
+            "shortDesc": "Device 2 IP Address",
+            "longDesc": "IP address of BluSDR device 2 (LM).",
+            "type": "string",
+            "default": "192.168.0.13"
+        },
+        {
+            "name": "updateInterval",
+            "shortDesc": "Update Interval",
+            "longDesc": "Data update interval in seconds.",
+            "type": "uint32",
+            "min": 1,
+            "max": 60,
+            "units": "s",
+            "default": 1
+        }
+    ]
+}

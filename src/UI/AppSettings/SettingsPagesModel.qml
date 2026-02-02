@@ -33,6 +33,13 @@ ListModel {
     }
 
     ListElement {
+        name: qsTr("BluSDR")
+        url: "qrc:/qml/QGroundControl/AppSettings/BluSDRSettings.qml"
+        iconUrl: "qrc:/InstrumentValueIcons/signal.svg"
+        pageVisible: function() { return true }
+    }
+
+    ListElement {
         name: "Divider"
     }
 

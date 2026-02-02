@@ -24,6 +24,8 @@
 #include "VideoSettings.h"
 #include "MavlinkSettings.h"
 #include "JoystickManagerSettings.h"
+#include "BluSDRSettings.h"
+#include "BluSDRManager.h"
 #ifdef QGC_VIEWER3D
 #include "Viewer3DSettings.h"
 #endif
@@ -42,6 +44,8 @@ SettingsManager::SettingsManager(QObject *parent)
     : QObject(parent)
 {
     qCDebug(SettingsManagerLog) << this;
+    _bluSDRSettings = new BluSDRSettings(this);
+    _bluSDRManager = new BluSDRManager(this);
 }
 
 SettingsManager::~SettingsManager()

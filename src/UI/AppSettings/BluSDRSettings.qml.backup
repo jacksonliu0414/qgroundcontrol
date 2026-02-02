@@ -1,0 +1,426 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+import QGroundControl
+import QGroundControl.Controls
+import QGroundControl.FactSystem
+import QGroundControl.FactControls
+import QGroundControl.ScreenTools
+import QGroundControl.Palette
+
+Rectangle {
+    id: root
+    color: qgcPal.window
+
+    property real _margins: ScreenTools.defaultFontPixelHeight
+    property var _blueSDRManager: QGroundControl.settingsManager.blueSDRManager
+
+    QGCPalette { id: qgcPal; colorGroupEnabled: true }
+
+    QGCFlickable {
+        anchors.fill: parent
+        contentHeight: mainColumn.height
+        contentWidth: mainColumn.width
+        clip: true
+
+        ColumnLayout {
+            id: mainColumn
+            anchors.margins: _margins
+            anchors.left: parent.left
+            anchors.right: parent.right
+            spacing: ScreenTools.defaultFontPixelHeight
+
+            // 標題區域
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: titleRow.height + (_margins * 2)
+                color: qgcPal.windowShade
+                radius: 5
+
+                RowLayout {
+                    id: titleRow
+                    anchors.fill: parent
+                    anchors.margins: _margins
+                    spacing: _margins
+
+                    QGCLabel {
+                        text: "📡 BlueSDR 監控儀表板"
+                        font.pointSize: ScreenTools.largeFontPointSize
+                        font.bold: true
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Rectangle {
+                        width: 12
+                        height: 12
+                        radius: 6
+                        color: "green"
+
+                        SequentialAnimation on opacity {
+                            loops: Animation.Infinite
+                            NumberAnimation { to: 0.3; duration: 1000 }
+                            NumberAnimation { to: 1.0; duration: 1000 }
+                        }
+                    }
+
+                    QGCLabel {
+                        text: "實時更新中"
+                        color: "green"
+                    }
+                }
+            }
+
+            // 設備列表
+            Repeater {
+                model: _blueSDRManager ? _blueSDRManager.deviceCount : 0
+
+                delegate: Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: deviceContent.height + (_margins * 2)
+                    color: qgcPal.windowShade
+                    border.color: device.connected ? "#4CAF50" : "#F44336"
+                    border.width: 3
+                    radius: 8
+
+                    property var device: _blueSDRManager.getDevice(index)
+
+                    ColumnLayout {
+                        id: deviceContent
+                        anchors.fill: parent
+                        anchors.margins: _margins
+                        spacing: _margins
+
+                        // 設備標題
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: _margins
+
+                            Rectangle {
+                                width: 16
+                                height: 16
+                                radius: 8
+                                color: device.connected ? "#4CAF50" : "#F44336"
+
+                                SequentialAnimation on scale {
+                                    running: device.connected
+                                    loops: Animation.Infinite
+                                    NumberAnimation { to: 1.3; duration: 500 }
+                                    NumberAnimation { to: 1.0; duration: 500 }
+                                }
+                            }
+
+                            QGCLabel {
+                                text: device.name
+                                font.pointSize: ScreenTools.largeFontPointSize
+                                font.bold: true
+                            }
+
+                            QGCLabel {
+                                text: "(" + device.ipAddress + ")"
+                                font.pointSize: ScreenTools.mediumFontPointSize
+                                color: qgcPal.textFieldText
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            QGCButton {
+                                text: device.enabled ? "停止監控" : "開始監控"
+                                primary: !device.enabled
+                                onClicked: device.enabled = !device.enabled
+                            }
+                        }
+
+                        QGCLabel {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: qgcPal.text
+                        }
+
+                        // 數據儀表板 (2x2 網格)
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: 2
+                            rowSpacing: _margins
+                            columnSpacing: _margins
+
+                            // RSSI 儀表
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 180
+                                color: qgcPal.window
+                                border.color: qgcPal.text
+                                border.width: 1
+                                radius: 5
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    spacing: 5
+
+                                    QGCLabel {
+                                        text: "📡 RSSI (信號強度)"
+                                        font.bold: true
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: device.rssiAverage.toFixed(1)
+                                        font.pointSize: ScreenTools.largeFontPointSize * 1.5
+                                        font.bold: true
+                                        color: device.rssiAverage > -70 ? "#4CAF50" :
+                                               device.rssiAverage > -80 ? "#FF9800" : "#F44336"
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: "dBm"
+                                    }
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        QGCLabel {
+                                            text: "A: " + device.rssiAntennaA.toFixed(1)
+                                            font.pointSize: ScreenTools.smallFontPointSize
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                        QGCLabel {
+                                            text: "B: " + device.rssiAntennaB.toFixed(1)
+                                            font.pointSize: ScreenTools.smallFontPointSize
+                                        }
+                                    }
+
+                                    ProgressBar {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 8
+                                        from: -100
+                                        to: -40
+                                        value: device.rssiAverage
+
+                                        background: Rectangle {
+                                            color: qgcPal.windowShade
+                                            radius: 4
+                                        }
+
+                                        contentItem: Rectangle {
+                                            width: parent.visualPosition * parent.width
+                                            radius: 4
+                                            color: device.rssiAverage > -70 ? "#4CAF50" :
+                                                   device.rssiAverage > -80 ? "#FF9800" : "#F44336"
+                                        }
+                                    }
+                                }
+                            }
+
+                            // SNR 儀表
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 180
+                                color: qgcPal.window
+                                border.color: qgcPal.text
+                                border.width: 1
+                                radius: 5
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    spacing: 5
+
+                                    QGCLabel {
+                                        text: "📶 SNR (信噪比)"
+                                        font.bold: true
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: device.snr.toFixed(1)
+                                        font.pointSize: ScreenTools.largeFontPointSize * 1.5
+                                        font.bold: true
+                                        color: device.snr > 20 ? "#4CAF50" :
+                                               device.snr > 10 ? "#FF9800" : "#F44336"
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: "dB"
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: device.snr > 20 ? "優秀" : device.snr > 10 ? "良好" : "較差"
+                                        font.pointSize: ScreenTools.smallFontPointSize
+                                        color: device.snr > 20 ? "#4CAF50" :
+                                               device.snr > 10 ? "#FF9800" : "#F44336"
+                                    }
+
+                                    ProgressBar {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 8
+                                        from: 0
+                                        to: 40
+                                        value: device.snr
+
+                                        background: Rectangle {
+                                            color: qgcPal.windowShade
+                                            radius: 4
+                                        }
+
+                                        contentItem: Rectangle {
+                                            width: parent.visualPosition * parent.width
+                                            radius: 4
+                                            color: device.snr > 20 ? "#4CAF50" :
+                                                   device.snr > 10 ? "#FF9800" : "#F44336"
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 溫度儀表
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 180
+                                color: qgcPal.window
+                                border.color: qgcPal.text
+                                border.width: 1
+                                radius: 5
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    spacing: 5
+
+                                    QGCLabel {
+                                        text: "🌡️ 溫度"
+                                        font.bold: true
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: device.temperature.toFixed(1)
+                                        font.pointSize: ScreenTools.largeFontPointSize * 1.5
+                                        font.bold: true
+                                        color: device.temperature > 70 ? "#F44336" :
+                                               device.temperature > 60 ? "#FF9800" : "#4CAF50"
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: "°C"
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: device.temperature > 70 ? "⚠️ 過熱" :
+                                              device.temperature > 60 ? "偏高" : "正常"
+                                        font.pointSize: ScreenTools.smallFontPointSize
+                                        color: device.temperature > 70 ? "#F44336" :
+                                               device.temperature > 60 ? "#FF9800" : "#4CAF50"
+                                    }
+
+                                    ProgressBar {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 8
+                                        from: 0
+                                        to: 100
+                                        value: device.temperature
+
+                                        background: Rectangle {
+                                            color: qgcPal.windowShade
+                                            radius: 4
+                                        }
+
+                                        contentItem: Rectangle {
+                                            width: parent.visualPosition * parent.width
+                                            radius: 4
+                                            color: device.temperature > 70 ? "#F44336" :
+                                                   device.temperature > 60 ? "#FF9800" : "#4CAF50"
+                                        }
+                                    }
+                                }
+                            }
+
+                            // CPU 使用率儀表
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 180
+                                color: qgcPal.window
+                                border.color: qgcPal.text
+                                border.width: 1
+                                radius: 5
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    spacing: 5
+
+                                    QGCLabel {
+                                        text: "💻 CPU 使用率"
+                                        font.bold: true
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: device.cpuUsage.toFixed(1)
+                                        font.pointSize: ScreenTools.largeFontPointSize * 1.5
+                                        font.bold: true
+                                        color: device.cpuUsage > 80 ? "#F44336" :
+                                               device.cpuUsage > 60 ? "#FF9800" : "#4CAF50"
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: "%"
+                                    }
+
+                                    QGCLabel {
+                                        Layout.alignment: Qt.AlignCenter
+                                        text: device.cpuUsage > 80 ? "⚠️ 負載高" :
+                                              device.cpuUsage > 60 ? "負載中" : "正常"
+                                        font.pointSize: ScreenTools.smallFontPointSize
+                                        color: device.cpuUsage > 80 ? "#F44336" :
+                                               device.cpuUsage > 60 ? "#FF9800" : "#4CAF50"
+                                    }
+
+                                    ProgressBar {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 8
+                                        from: 0
+                                        to: 100
+                                        value: device.cpuUsage
+
+                                        background: Rectangle {
+                                            color: qgcPal.windowShade
+                                            radius: 4
+                                        }
+
+                                        contentItem: Rectangle {
+                                            width: parent.visualPosition * parent.width
+                                            radius: 4
+                                            color: device.cpuUsage > 80 ? "#F44336" :
+                                                   device.cpuUsage > 60 ? "#FF9800" : "#4CAF50"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 底部狀態欄
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 30
+                            color: qgcPal.windowShade
+                            radius: 3
+
+                            QGCLabel {
+                                anchors.centerIn: parent
+                                text: "最後更新: " + device.lastUpdate
+                                font.pointSize: ScreenTools.smallFontPointSize
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

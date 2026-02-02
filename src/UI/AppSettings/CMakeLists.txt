@@ -7,6 +7,7 @@ qt_add_qml_module(AppSettingsModule
     QML_FILES
         ADSBServerSettings.qml
         BluetoothSettings.qml
+        BluSDRSettings.qml
         DebugWindow.qml
         FlyViewSettings.qml
         GeneralSettings.qml

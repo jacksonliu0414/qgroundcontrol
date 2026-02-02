@@ -251,7 +251,8 @@ ApplicationWindow {
 
     background: Rectangle {
         anchors.fill:   parent
-        color:          QGroundControl.globalPalette.window
+        //color:          QGroundControl.globalPalette.window
+        color:          "#1a1a1a"
     }
 
     FlyView {

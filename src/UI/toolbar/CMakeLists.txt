@@ -15,6 +15,8 @@ qt_add_qml_module(ToolbarModule
         MultiVehicleSelector.qml
         RCRSSIIndicator.qml
         RemoteIDIndicator.qml
+        BluSDRIndicator.qml
+        BluSDRIndicatorPage.qml
         RTKGPSIndicator.qml
         SelectViewDropdown.qml
         TelemetryRSSIIndicator.qml

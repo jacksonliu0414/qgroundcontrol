@@ -30,6 +30,8 @@ class Viewer3DSettings;
 class MavlinkSettings;
 class FactMetaData;
 class JoystickManagerSettings;
+class BluSDRSettings;
+class BluSDRManager;
 
 Q_DECLARE_LOGGING_CATEGORY(SettingsManagerLog)
 
@@ -63,6 +65,8 @@ class SettingsManager : public QObject
     Q_MOC_INCLUDE("VideoSettings.h")
     Q_MOC_INCLUDE("MavlinkSettings.h")
     Q_MOC_INCLUDE("JoystickManagerSettings.h")
+    Q_MOC_INCLUDE("BluSDRSettings.h")
+    Q_MOC_INCLUDE("BluSDRManager.h")
 #ifdef QGC_VIEWER3D
     Q_MOC_INCLUDE("Viewer3DSettings.h")
 #endif
@@ -90,6 +94,9 @@ class SettingsManager : public QObject
     Q_PROPERTY(QObject *videoSettings                   READ videoSettings                  CONSTANT)
     Q_PROPERTY(QObject *mavlinkSettings                 READ mavlinkSettings                CONSTANT)
     Q_PROPERTY(QObject *joystickManagerSettings         READ joystickManagerSettings        CONSTANT)
+    Q_PROPERTY(QObject *bluSDRSettings     READ bluSDRSettings    CONSTANT)
+    Q_PROPERTY(QObject *bluSDRManager      READ bluSDRManager     CONSTANT)
+
 #ifdef QGC_VIEWER3D
     Q_PROPERTY(QObject *viewer3DSettings                READ viewer3DSettings               CONSTANT)
 #endif
@@ -132,6 +139,9 @@ public:
     VideoSettings *videoSettings() const;
     MavlinkSettings *mavlinkSettings() const;
     JoystickManagerSettings *joystickManagerSettings() const;
+    BluSDRSettings*    bluSDRSettings()    { return _bluSDRSettings; }
+    BluSDRManager*     bluSDRManager()     { return _bluSDRManager; }
+
 #ifdef QGC_VIEWER3D
     Viewer3DSettings *viewer3DSettings() const;
 #endif
@@ -163,6 +173,9 @@ private:
     VideoSettings *_videoSettings = nullptr;
     MavlinkSettings *_mavlinkSettings = nullptr;
     JoystickManagerSettings *_joystickManagerSettings = nullptr;
+    BluSDRSettings*    _bluSDRSettings = nullptr;
+    BluSDRManager*     _bluSDRManager = nullptr;
+
 #ifdef QGC_VIEWER3D
     Viewer3DSettings *_viewer3DSettings = nullptr;
 #endif

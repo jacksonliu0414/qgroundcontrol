@@ -9,6 +9,10 @@ import QGroundControl.FlightMap
 ColumnLayout {
     spacing: ScreenTools.defaultFontPixelHeight / 2
 
+    BluSDRCompactIndicator {
+        Layout.alignment: Qt.AlignRight
+    }
+
     TerrainProgress {
         Layout.fillWidth: true
     }
