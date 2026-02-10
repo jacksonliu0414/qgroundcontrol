@@ -3,6 +3,7 @@
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
 #include <QtCore/QObject>
+#include <QtCore/QPointer>
 #include <QtCore/QSharedPointer>
 #include <QtCore/QTime>
 #include <QtCore/QTimer>
@@ -27,6 +28,7 @@
 #include "VehicleGeneratorFactGroup.h"
 #include "VehicleGPS2FactGroup.h"
 #include "VehicleGPSFactGroup.h"
+#include "VehicleGPSAggregateFactGroup.h"
 #include "VehicleHygrometerFactGroup.h"
 #include "VehicleLocalPositionFactGroup.h"
 #include "VehicleLocalPositionSetpointFactGroup.h"
@@ -243,6 +245,7 @@ public:
     Q_PROPERTY(FactGroup*           vehicle         READ vehicleFactGroup           CONSTANT)
     Q_PROPERTY(FactGroup*           gps             READ gpsFactGroup               CONSTANT)
     Q_PROPERTY(FactGroup*           gps2            READ gps2FactGroup              CONSTANT)
+    Q_PROPERTY(FactGroup*           gpsAggregate    READ gpsAggregateFactGroup      CONSTANT)
     Q_PROPERTY(FactGroup*           wind            READ windFactGroup              CONSTANT)
     Q_PROPERTY(FactGroup*           vibration       READ vibrationFactGroup         CONSTANT)
     Q_PROPERTY(FactGroup*           temperature     READ temperatureFactGroup       CONSTANT)
@@ -569,6 +572,7 @@ public:
     FactGroup* vehicleFactGroup             () { return _vehicleFactGroup; }
     FactGroup* gpsFactGroup                 () { return &_gpsFactGroup; }
     FactGroup* gps2FactGroup                () { return &_gps2FactGroup; }
+    FactGroup* gpsAggregateFactGroup        () { return &_gpsAggregateFactGroup; }
     FactGroup* windFactGroup                () { return &_windFactGroup; }
     FactGroup* vibrationFactGroup           () { return &_vibrationFactGroup; }
     FactGroup* temperatureFactGroup         () { return &_temperatureFactGroup; }
@@ -912,6 +916,8 @@ private slots:
     void _updateFlightTime                  ();
     void _gotProgressUpdate                 (float progressValue);
     void _doSetHomeTerrainReceived          (bool success, QList<double> heights);
+    void _roiTerrainReceived                (bool success, QList<double> heights);
+    void _sendROICommand                    (const QGeoCoordinate& coord, MAV_FRAME frame, float altitude);
     void _updateAltAboveTerrain             ();
     void _altitudeAboveTerrainReceived      (bool sucess, QList<double> heights);
 
@@ -966,9 +972,13 @@ void _activeVehicleChanged          (Vehicle* newActiveVehicle);
 
     static void _rebootCommandResultHandler(void* resultHandlerData, int compId, const mavlink_command_ack_t& ack, MavCmdResultFailureCode_t failureCode);
 
-    // The following two methods should only be called by unit tests
+    // The following methods should only be called by unit tests
     void _deleteGimbalController();
     void _deleteCameraManager();
+
+    /// Called by VehicleLinkManager when all links are removed.
+    /// Stops command processing timers to prevent callbacks during vehicle destruction.
+    void _stopCommandProcessing();
 
     int     _id;                    ///< Mavlink system id
     int     _defaultComponentId;
@@ -1128,7 +1138,7 @@ void _activeVehicleChanged          (Vehicle* newActiveVehicle);
     // requestMessage handling
 
     typedef struct RequestMessageInfo {
-        Vehicle*                    vehicle             = nullptr;
+        QPointer<Vehicle>           vehicle;                        // QPointer automatically becomes null when Vehicle is destroyed
         int                         compId;
         int                         msgId;
         RequestMessageResultHandler resultHandler       = nullptr;
@@ -1163,15 +1173,21 @@ void _activeVehicleChanged          (Vehicle* newActiveVehicle);
         int                     maxTries            = _mavCommandMaxRetryCount;
         int                     tryCount            = 0;
         QElapsedTimer           elapsedTimer;
-        int                     ackTimeoutMSecs     = _mavCommandAckTimeoutMSecs;
+        int                     ackTimeoutMSecs     = 0;
     } MavCommandListEntry_t;
 
     QList<MavCommandListEntry_t>    _mavCommandList;
     QTimer                          _mavCommandResponseCheckTimer;
-    static const int                _mavCommandMaxRetryCount                = 3;
-    static const int                _mavCommandResponseCheckTimeoutMSecs    = 500;
-    static const int                _mavCommandAckTimeoutMSecs              = 3000;
-    static const int                _mavCommandAckTimeoutMSecsHighLatency   = 120000;
+    static constexpr int _mavCommandMaxRetryCount = 3;
+    static int _mavCommandResponseCheckTimeoutMSecs();
+    static int _mavCommandAckTimeoutMSecs();
+    static constexpr int _mavCommandAckTimeoutMSecsHighLatency = 120000;
+
+public:
+    /// Ack timeout used in unit tests (much shorter for faster tests)
+    static constexpr int kTestMavCommandAckTimeoutMs = 100;
+    /// Maximum wait time for mav command in unit tests (all retries + overhead)
+    static constexpr int kTestMavCommandMaxWaitMs = kTestMavCommandAckTimeoutMs * _mavCommandMaxRetryCount * 2;
 
     void _sendMavCommandWorker  (
             bool commandInt, bool showError,
@@ -1196,6 +1212,7 @@ void _activeVehicleChanged          (Vehicle* newActiveVehicle);
     const QString _vehicleFactGroupName =            QStringLiteral("vehicle");
     const QString _gpsFactGroupName =                QStringLiteral("gps");
     const QString _gps2FactGroupName =               QStringLiteral("gps2");
+    const QString _gpsAggregateFactGroupName =       QStringLiteral("gpsAggregate");
     const QString _windFactGroupName =               QStringLiteral("wind");
     const QString _vibrationFactGroupName =          QStringLiteral("vibration");
     const QString _temperatureFactGroupName =        QStringLiteral("temperature");
@@ -1214,6 +1231,7 @@ void _activeVehicleChanged          (Vehicle* newActiveVehicle);
     VehicleFactGroup*               _vehicleFactGroup;
     VehicleGPSFactGroup             _gpsFactGroup;
     VehicleGPS2FactGroup            _gps2FactGroup;
+    VehicleGPSAggregateFactGroup    _gpsAggregateFactGroup;
     VehicleWindFactGroup            _windFactGroup;
     VehicleVibrationFactGroup       _vibrationFactGroup;
     VehicleTemperatureFactGroup     _temperatureFactGroup;
@@ -1248,6 +1266,10 @@ void _activeVehicleChanged          (Vehicle* newActiveVehicle);
     // Terrain query members, used to get terrain altitude for doSetHome()
     TerrainAtCoordinateQuery*   _currentDoSetHomeTerrainAtCoordinateQuery = nullptr;
     QGeoCoordinate              _doSetHomeCoordinate;
+
+    // Terrain query members, used to get terrain altitude for guidedModeROI()
+    TerrainAtCoordinateQuery*   _roiTerrainAtCoordinateQuery = nullptr;
+    QGeoCoordinate              _roiCoordinate;
 
     // Terrain query members, used to get altitude above terrain Fact
     QElapsedTimer               _altitudeAboveTerrQueryTimer;

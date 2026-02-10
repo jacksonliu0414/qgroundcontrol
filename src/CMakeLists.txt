@@ -41,6 +41,7 @@ add_subdirectory(FlightMap)
 add_subdirectory(FollowMe)
 add_subdirectory(Gimbal)
 add_subdirectory(GPS)
+add_subdirectory(Utilities)
 add_subdirectory(Joystick)
 add_subdirectory(MAVLink)
 add_subdirectory(MissionManager)
@@ -49,7 +50,6 @@ add_subdirectory(QmlControls)
 add_subdirectory(Settings)
 add_subdirectory(Terrain)
 add_subdirectory(UI)
-add_subdirectory(Utilities)
 add_subdirectory(UTMSP)
 add_subdirectory(Vehicle)
 add_subdirectory(VideoManager)
@@ -73,14 +73,6 @@ target_sources(${CMAKE_PROJECT_NAME}
         QGCApplication.h
 )
 
-# Platform-specific sources
-if(NOT ANDROID AND NOT IOS)
-    target_sources(${CMAKE_PROJECT_NAME}
-        PRIVATE
-            RunGuard.cc
-            RunGuard.h
-    )
-endif()
 
 # ----------------------------------------------------------------------------
 # Include Directories
@@ -201,12 +193,6 @@ else()
             $<$<BOOL:${QGC_DEBUG_QML}>:QT_QML_DEBUG>
     )
 endif()
-
-# ============================================================================
-# Code Coverage Configuration
-# ============================================================================
-
-include(Coverage)
 
 # ============================================================================
 # Target Properties
